@@ -1,9 +1,10 @@
-import { memo, useCallback } from "react";
+import { memo, useCallback, useMemo } from "react";
 
 import {
   useLaunchMachineActorRef,
   useLaunchMachineSelector,
 } from "@/components/launchMachineProvider";
+import { useTelemetryStore } from "@/stores/telemetryStore";
 
 type EregCommand = "EREG_CLOSED" | "EREG_STAGE_1" | "EREG_STAGE_2";
 
@@ -104,6 +105,8 @@ const StageButton = memo(function StageButton({
 
 export const ElectronicsRegulator = memo(function ElectronicsRegulator() {
   const launchActorRef = useLaunchMachineActorRef();
+  const telemetryStore = useTelemetryStore();
+
   const eregData = useLaunchMachineSelector(
     (state) => state.context.deviceStates.fsLoxGn2Transducers?.data ?? null,
   );
@@ -145,6 +148,61 @@ export const ElectronicsRegulator = memo(function ElectronicsRegulator() {
     (s) => eregData?.[s.activeField] ?? false,
   );
 
+  const pressureWarnings = useMemo(() => {
+    const now = Date.now() * 1000;
+    const recentTime = now - 5 * 1e6;
+
+    const copv1Samples = telemetryStore.getSamples(
+      "copv_1_psi",
+      recentTime,
+      now,
+    );
+    const copv2Samples = telemetryStore.getSamples(
+      "copv_2_psi",
+      recentTime,
+      now,
+    );
+    const oxtank1Samples = telemetryStore.getSamples(
+      "oxtank_1_psi",
+      recentTime,
+      now,
+    );
+    const oxtank2Samples = telemetryStore.getSamples(
+      "oxtank_2_psi",
+      recentTime,
+      now,
+    );
+    const oxtank3Samples = telemetryStore.getSamples(
+      "oxtank_3_psi",
+      recentTime,
+      now,
+    );
+
+    const copv1 = copv1Samples[copv1Samples.length - 1]?.value ?? 0;
+    const copv2 = copv2Samples[copv2Samples.length - 1]?.value ?? 0;
+    const oxtank1 = oxtank1Samples[oxtank1Samples.length - 1]?.value ?? 0;
+    const oxtank2 = oxtank2Samples[oxtank2Samples.length - 1]?.value ?? 0;
+    const oxtank3 = oxtank3Samples[oxtank3Samples.length - 1]?.value ?? 0;
+
+    const copvDiff = Math.abs(copv1 - copv2);
+    const oxtank12Diff = Math.abs(oxtank1 - oxtank2);
+    const oxtank23Diff = Math.abs(oxtank2 - oxtank3);
+
+    const warnings = [];
+
+    if (copvDiff > 50) {
+      warnings.push(`COPV 1-2: ${copvDiff.toFixed(0)} PSI`);
+    }
+    if (oxtank12Diff > 50) {
+      warnings.push(`Oxtank 1-2: ${oxtank12Diff.toFixed(0)} PSI`);
+    }
+    if (oxtank23Diff > 50) {
+      warnings.push(`Oxtank 2-3: ${oxtank23Diff.toFixed(0)} PSI`);
+    }
+
+    return warnings;
+  }, [telemetryStore]);
+
   return (
     <div className="flex flex-col p-4 border bg-gray-bg-1 rounded-xl border-gray-border gap-3">
       <div className="flex items-center justify-between">
@@ -163,6 +221,15 @@ export const ElectronicsRegulator = memo(function ElectronicsRegulator() {
           )}
         </div>
       </div>
+
+      {pressureWarnings.length > 0 && (
+        <div className="flex items-center px-2 py-1 border rounded-md bg-red-bg border-red-border gap-2">
+          <span className="text-xs text-red-text">🚩</span>
+          <div className="flex-1 text-xs text-red-text">
+            {pressureWarnings.join(" • ")}
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center justify-between px-3 py-2 border rounded-lg bg-gray-el-bg border-gray-border">
         <span className="text-xs text-gray-text-dim">Current state</span>
