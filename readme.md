@@ -26,3 +26,9 @@ Then, use the following command to serve the bundle:
 ```sh
 bun preview --host
 ```
+When ready to publish a new release, create and push a version tag:
+```sh
+git tag v'tag_number' 
+git push origin v'tag_number'
+```
+This will trigger the CI workflow to build and publish the release automatically. 
