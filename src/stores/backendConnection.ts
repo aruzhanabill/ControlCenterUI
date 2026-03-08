@@ -40,6 +40,9 @@ class BackendConnectionManager {
   }
 
   private processDeviceStates(deviceStates: DeviceStates, timestamp: number) {
+    console.log("loadCell1:", deviceStates.loadCell1);
+    console.log("loadCell2:", deviceStates.loadCell2);
+
     const store = useTelemetryStore.getState();
 
     if (deviceStates.fsLoxGn2Transducers) {
