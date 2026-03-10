@@ -89,8 +89,7 @@ const TotalNitrousDisplay = memo(function TotalNitrousDisplay() {
 
   const vaporPressurePsi = useLaunchMachineSelector(
     (state) =>
-      state.context.deviceStates.fsLoxGn2Transducers?.data.lox_upper_median ??
-      0,
+      state.context.deviceStates.fsLoxGn2Transducers?.data.oxtank_1_median ?? 0,
   );
 
   const { liquidMassLbs, vaporMassLbs } = useMemo(
@@ -159,7 +158,6 @@ const AltitudeDisplay = memo(function AltitudeDisplay() {
 });
 
 const AccelerationDisplay = memo(function AccelerationDisplay() {
-  // calibrated to 1g on the ground
   const G_PER_RAW = 1 / 2140;
 
   const raw_value = useLaunchMachineSelector(
@@ -222,31 +220,31 @@ export const StatusPanel = memo(function StatusPanel() {
       ) : (
         <div className="grid grid-cols-3 gap-4">
           <StatusDisplayWithChart
-            label="Lox Upper (PSI)"
+            label="Oxtank 1 Median (PSI)"
             // eslint-disable-next-line react-perf/jsx-no-new-function-as-prop
             selector={({ fsLoxGn2Transducers: rec }) =>
-              rec && { ts: rec.ts, value: rec.data.lox_upper_median }
+              rec && { ts: rec.ts, value: rec.data.oxtank_1_median }
             }
           />
           <StatusDisplayWithChart
-            label="Combustion Chamber (PSI)"
+            label="Oxtank 2 Median (PSI)"
             // eslint-disable-next-line react-perf/jsx-no-new-function-as-prop
             selector={({ fsLoxGn2Transducers: rec }) =>
-              rec && { ts: rec.ts, value: rec.data.chamber_median }
+              rec && { ts: rec.ts, value: rec.data.oxtank_2_median }
             }
           />
           <StatusDisplayWithChart
-            label="GN2 1 (PSI)"
+            label="COPV 1 Median (PSI)"
             // eslint-disable-next-line react-perf/jsx-no-new-function-as-prop
             selector={({ fsLoxGn2Transducers: rec }) =>
-              rec && { ts: rec.ts, value: rec.data.gn2_manifold_1_median }
+              rec && { ts: rec.ts, value: rec.data.copv_1_median }
             }
           />
           <StatusDisplayWithChart
-            label="GN2 2 (PSI)"
+            label="COPV 2 Median (PSI)"
             // eslint-disable-next-line react-perf/jsx-no-new-function-as-prop
             selector={({ fsLoxGn2Transducers: rec }) =>
-              rec && { ts: rec.ts, value: rec.data.gn2_manifold_2_median }
+              rec && { ts: rec.ts, value: rec.data.copv_2_median }
             }
           />
           <StatusDisplayWithChart
@@ -316,9 +314,6 @@ export const StatusPanel = memo(function StatusPanel() {
             maxY="dataMax + 2"
           />
 
-          {/* <LoadCell1Display /> */}
-          {/* <LoadCell2Display /> */}
-          {/* <TotalLoadCellDisplay /> */}
           <TotalNitrousDisplay />
         </div>
       )}
