@@ -393,10 +393,10 @@ export function createLaunchMachine(
           if (!canWrite) return false;
           const e = event as { type: "SEND_FS_COMMAND"; value: FsCommandMessage };
           const fsState = context.deviceStates.fsState;
-          if (!fsState) return false;
           if (e.value.command === "STATE_CUSTOM") return true;
-          if (e.value.command === fsStateToCommand(fsState.data.state)) return false;
+          if (fsState && e.value.command === fsStateToCommand(fsState.data.state)) return false;
           if (e.value.command === "STATE_FIRE") {
+            if (!fsState) return false;
             const state = fsState.data.state;
             return state === "GN2_STANDBY" || state === "CUSTOM";
           }
