@@ -112,10 +112,12 @@ export const fsLoxGn2TransducersRecordSchema = z.object({
   ereg_closed: z.boolean(),
   ereg_stage_1: z.boolean(),
   ereg_stage_2: z.boolean(),
-  lox_upper_median: z.number().default(0),
-  chamber_median: z.number().default(0),
-  gn2_manifold_1_median: z.number().default(0),
-  gn2_manifold_2_median: z.number().default(0),
+  oxtank_1_median: z.number().default(0),
+  oxtank_2_median: z.number().default(0),
+  copv_1_median: z.number().default(0),
+  copv_2_median: z.number().default(0),
+  pilot_pres_median: z.number().default(0),
+  qd_pres_median: z.number().default(0),
 });
 
 export type FsLoxGn2TransducersRecord = z.infer<
