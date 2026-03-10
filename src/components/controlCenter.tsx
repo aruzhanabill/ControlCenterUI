@@ -1,7 +1,5 @@
 import { memo, useCallback, useState } from "react";
 
-import { useDummyStation } from "@/hooks/useDummyStation";
-
 import { useLaunchMachineSelector } from "./launchMachineProvider";
 import { MessagesModal } from "./messagesModal";
 import { PreFirePanel } from "./preFirePanel";
@@ -9,8 +7,6 @@ import { RecoveryPanel } from "./recoveryPanel";
 import { TopStatusPanel } from "./topStatusPanel";
 
 export const ControlCenter = memo(function ControlCenter() {
-  useDummyStation();
-
   const [messagesModalOpen, setMessagesModalOpen] = useState(false);
 
   const openMessagesModal = useCallback(() => {
