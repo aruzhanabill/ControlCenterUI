@@ -4,7 +4,6 @@ import { subscribeWithSelector } from "zustand/middleware";
 export type SignalType =
   | "oxtank_1_psi"
   | "oxtank_2_psi"
-  | "oxtank_3_psi"
   | "copv_1_psi"
   | "copv_2_psi"
   | "pilot_pres_psi"
@@ -32,7 +31,6 @@ export const SIGNAL_METADATA: Record<
 > = {
   oxtank_1_psi: { label: "Oxtank 1", unit: "PSI", color: "#00d4ff" },
   oxtank_2_psi: { label: "Oxtank 2", unit: "PSI", color: "#00b4d8" },
-  oxtank_3_psi: { label: "Oxtank 3", unit: "PSI", color: "#0096c7" },
   copv_1_psi: { label: "COPV 1", unit: "PSI", color: "#8338ec" },
   copv_2_psi: { label: "COPV 2", unit: "PSI", color: "#3a86ff" },
   pilot_pres_psi: { label: "Pilot Pressure", unit: "PSI", color: "#7209b7" },
@@ -138,7 +136,6 @@ const initializeBuffers = () => {
   const signals: SignalType[] = [
     "oxtank_1_psi",
     "oxtank_2_psi",
-    "oxtank_3_psi",
     "copv_1_psi",
     "copv_2_psi",
     "pilot_pres_psi",

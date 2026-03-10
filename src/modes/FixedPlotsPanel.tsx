@@ -22,7 +22,7 @@ const PLOT_CONFIGS = [
   },
   {
     title: "Oxtank Pressure",
-    signals: ["oxtank_1_psi", "oxtank_2_psi", "oxtank_3_psi"] as const,
+    signals: ["oxtank_1_psi", "oxtank_2_psi"] as const,
     unit: "PSI",
     height: 240,
   },

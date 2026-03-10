@@ -58,11 +58,6 @@ class BackendConnectionManager {
         value: data.oxtank_2,
       });
 
-      store.appendSample("oxtank_3_psi", {
-        timestamp,
-        value: data.oxtank_3,
-      });
-
       store.appendSample("copv_1_psi", {
         timestamp,
         value: data.copv_1,

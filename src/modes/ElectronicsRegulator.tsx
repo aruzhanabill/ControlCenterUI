@@ -172,32 +172,22 @@ export const ElectronicsRegulator = memo(function ElectronicsRegulator() {
       recentTime,
       now,
     );
-    const oxtank3Samples = telemetryStore.getSamples(
-      "oxtank_3_psi",
-      recentTime,
-      now,
-    );
 
     const copv1 = copv1Samples[copv1Samples.length - 1]?.value ?? 0;
     const copv2 = copv2Samples[copv2Samples.length - 1]?.value ?? 0;
     const oxtank1 = oxtank1Samples[oxtank1Samples.length - 1]?.value ?? 0;
     const oxtank2 = oxtank2Samples[oxtank2Samples.length - 1]?.value ?? 0;
-    const oxtank3 = oxtank3Samples[oxtank3Samples.length - 1]?.value ?? 0;
 
     const copvDiff = Math.abs(copv1 - copv2);
-    const oxtank12Diff = Math.abs(oxtank1 - oxtank2);
-    const oxtank23Diff = Math.abs(oxtank2 - oxtank3);
+    const oxtankDiff = Math.abs(oxtank1 - oxtank2);
 
     const warnings = [];
 
     if (copvDiff > 50) {
       warnings.push(`COPV 1-2: ${copvDiff.toFixed(0)} PSI`);
     }
-    if (oxtank12Diff > 50) {
-      warnings.push(`Oxtank 1-2: ${oxtank12Diff.toFixed(0)} PSI`);
-    }
-    if (oxtank23Diff > 50) {
-      warnings.push(`Oxtank 2-3: ${oxtank23Diff.toFixed(0)} PSI`);
+    if (oxtankDiff > 50) {
+      warnings.push(`Oxtank 1-2: ${oxtankDiff.toFixed(0)} PSI`);
     }
 
     return warnings;

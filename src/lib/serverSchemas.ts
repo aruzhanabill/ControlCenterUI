@@ -105,7 +105,6 @@ export const fsLoxGn2TransducersRecordSchema = z.object({
   ts: z.number(),
   oxtank_1: z.number(),
   oxtank_2: z.number(),
-  oxtank_3: z.number(),
   copv_1: z.number(),
   copv_2: z.number(),
   pilot_pres: z.number(),
