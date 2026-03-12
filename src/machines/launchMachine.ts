@@ -61,13 +61,22 @@ export interface SentMessage {
 
 export type LaunchMachineEvent =
   | { type: "DISMISS_NETWORK_ERROR" }
-  | { type: "UPDATE_ACTIVE_PANEL"; value: ActivePanel }
-  | { type: "UPDATE_MAIN_STATUS"; data: Partial<LaunchState["mainStatus"]> }
-  | { type: "UPDATE_ARM_STATUS"; data: Partial<LaunchState["armStatus"]> }
-  | { type: "UPDATE_PRE_FILL_CHECKLIST"; data: Partial<LaunchState["preFillChecklist"]> }
-  | { type: "UPDATE_RANGE_PERMIT"; data: Partial<LaunchState["rangePermit"]> }
-  | { type: "SEND_FS_COMMAND"; value: FsCommandMessage }
-  | { type: "SEND_MANUAL_MESSAGES"; messages: PendingMessage[] };
+  | {
+      type: "UPDATE_ACTIVE_PANEL";
+      value: ActivePanel;
+    }
+  | {
+      type: "UPDATE_MAIN_STATUS";
+      data: Partial<LaunchState["mainStatus"]>;
+    }
+  | {
+      type: "SEND_FS_COMMAND";
+      value: FsCommandMessage;
+    }
+  | {
+      type: "SEND_MANUAL_MESSAGES";
+      messages: PendingMessage[];
+    };
 
 export function createLaunchMachine(
   api: Api,
@@ -81,6 +90,7 @@ export function createLaunchMachine(
 
   return createMachine(
     {
+      tsTypes: {} as import("./launchMachine.typegen").Typegen0,
       predictableActionArguments: true,
       schema: {
         events: {} as LaunchMachineEvent,
@@ -127,7 +137,10 @@ export function createLaunchMachine(
                 fetching: {
                   invoke: {
                     src: "fetchLaunchState",
-                    onDone: { target: "idle", actions: "setLaunchState" },
+                    onDone: {
+                      target: "idle",
+                      actions: "setLaunchState",
+                    },
                     onError: "#launch.networkError",
                   },
                 },
@@ -136,9 +149,6 @@ export function createLaunchMachine(
                   on: {
                     UPDATE_ACTIVE_PANEL: { actions: "updateActivePanel", cond: "canWrite" },
                     UPDATE_MAIN_STATUS: { actions: "updateMainStatus", cond: "canWrite" },
-                    UPDATE_ARM_STATUS: { actions: "updateArmStatus", cond: "canWrite" },
-                    UPDATE_PRE_FILL_CHECKLIST: { actions: "updatePreFillChecklist", cond: "canWrite" },
-                    UPDATE_RANGE_PERMIT: { actions: "updateRangePermit", cond: "canWrite" },
                   },
                   initial: "waitingToRefetch",
                   states: {
@@ -148,7 +158,10 @@ export function createLaunchMachine(
                     refetching: {
                       invoke: {
                         src: "fetchLaunchState",
-                        onDone: { target: "waitingToRefetch", actions: "setLaunchState" },
+                        onDone: {
+                          target: "waitingToRefetch",
+                          actions: "setLaunchState",
+                        },
                         onError: "#launch.networkError",
                       },
                     },
@@ -157,7 +170,10 @@ export function createLaunchMachine(
                 mutating: {
                   invoke: {
                     src: "mutateLaunchState",
-                    onDone: { target: "idle", actions: "setLaunchState" },
+                    onDone: {
+                      target: "idle",
+                      actions: "setLaunchState",
+                    },
                     onError: "#launch.networkError",
                   },
                   exit: "clearPendingLaunchState",
@@ -170,7 +186,10 @@ export function createLaunchMachine(
                 fetching: {
                   invoke: {
                     src: "fetchDeviceStates",
-                    onDone: { target: "idle", actions: "setDeviceStates" },
+                    onDone: {
+                      target: "idle",
+                      actions: "setDeviceStates",
+                    },
                     onError: "#launch.networkError",
                   },
                 },
@@ -187,7 +206,10 @@ export function createLaunchMachine(
                     refetching: {
                       invoke: {
                         src: "fetchDeviceStates",
-                        onDone: { target: "waitingToRefetch", actions: "setDeviceStates" },
+                        onDone: {
+                          target: "waitingToRefetch",
+                          actions: "setDeviceStates",
+                        },
                         onError: "#launch.networkError",
                       },
                     },
@@ -196,14 +218,20 @@ export function createLaunchMachine(
                 sendingFsCommand: {
                   invoke: {
                     src: "sendFsCommand",
-                    onDone: { target: "idle.refetching", actions: "addSentMessages" },
+                    onDone: {
+                      target: "idle.refetching",
+                      actions: "addSentMessages",
+                    },
                     onError: "#launch.networkError",
                   },
                 },
                 sendingManualMessages: {
                   invoke: {
                     src: "sendManualMessages",
-                    onDone: { target: "idle.refetching", actions: "addSentMessages" },
+                    onDone: {
+                      target: "idle.refetching",
+                      actions: "addSentMessages",
+                    },
                     onError: "#launch.networkError",
                   },
                 },
@@ -223,59 +251,29 @@ export function createLaunchMachine(
           pendingLaunchState: (_) => null,
         }),
         setLaunchState: assign({
-          launchState: (_, event) => (event as unknown as { data: LaunchState }).data,
+          launchState: (_, event) => event.data,
         }),
         updateActivePanel: assign({
           pendingLaunchState: (context, event) => ({
             ...context.launchState,
-            activePanel: (event as { type: "UPDATE_ACTIVE_PANEL"; value: ActivePanel }).value,
+            activePanel: event.value,
           }),
         }),
         updateMainStatus: assign({
           pendingLaunchState: (context, event) => ({
             ...context.launchState,
-            mainStatus: {
-              ...context.launchState.mainStatus,
-              ...(event as { data: Partial<LaunchState["mainStatus"]> }).data,
-            },
-          }),
-        }),
-        updateArmStatus: assign({
-          pendingLaunchState: (context, event) => ({
-            ...context.launchState,
-            armStatus: {
-              ...context.launchState.armStatus,
-              ...(event as { data: Record<string, boolean> }).data,
-            } as Record<string, boolean>,
-          }),
-        }),
-        updatePreFillChecklist: assign({
-          pendingLaunchState: (context, event) => ({
-            ...context.launchState,
-            preFillChecklist: {
-              ...context.launchState.preFillChecklist,
-              ...(event as { data: Record<string, boolean> }).data,
-            } as Record<string, boolean>,
-          }),
-        }),
-        updateRangePermit: assign({
-          pendingLaunchState: (context, event) => ({
-            ...context.launchState,
-            rangePermit: {
-              ...context.launchState.rangePermit,
-              ...(event as { data: Record<string, boolean> }).data,
-            } as Record<string, boolean>,
+            mainStatus: { ...context.launchState.mainStatus, ...event.data },
           }),
         }),
         setDeviceStates: assign((_context, event) => {
-          return { deviceStates: (event as unknown as { data: DeviceStates }).data };
+          return { deviceStates: event.data };
         }),
         logNetworkError: (_, event) => {
           console.error("Launch machine network error", event);
         },
         addSentMessages: assign((context, event) => {
           return {
-            sentMessages: [...context.sentMessages, ...(event as unknown as { data: SentMessage[] }).data],
+            sentMessages: [...context.sentMessages, ...event.data],
           };
         }),
       },
@@ -297,6 +295,7 @@ export function createLaunchMachine(
           return launchStateSchema.parse(records[0].data);
         },
         mutateLaunchState: async (context) => {
+          // sanity check
           if (!context.pendingLaunchState) {
             throw new Error("No pending launch state");
           }
@@ -312,6 +311,7 @@ export function createLaunchMachine(
         fetchDeviceStates: async () => {
           const curTimeMicros = Date.now() * 1000;
           const elapsedMicros = curTimeMicros - startTimeMicros;
+
           const endTs = replayFromSeconds != null ? String(elapsedMicros + replayFromSeconds * 1e6) : undefined;
 
           const records = await catchError(
@@ -334,40 +334,50 @@ export function createLaunchMachine(
             }),
           );
 
+          const fsStateRaw = records[DEVICES.fsState];
+          const fsLoxGn2TransducersRaw = records[DEVICES.fsLoxGn2Transducers];
+          const fsInjectorTransducersRaw = records[DEVICES.fsInjectorTransducers];
+          const fsThermocouplesRaw = records[DEVICES.fsThermocouples];
+          const loadCell1Raw = records[DEVICES.loadCell1];
+          const loadCell2Raw = records[DEVICES.loadCell2];
+          const radioGroundRaw = records[DEVICES.radioGround];
+          const relayCurrentMonitorRaw = records[DEVICES.relayCurrentMonitor];
+
           const parseRecord = <T>(schema: z.ZodType<T>, record: DeviceRecord<unknown> | null) => {
             return record ? { ts: record.ts, data: schema.parse(record.data) } : null;
           };
 
           return {
-            fsState: parseRecord(fsStateRecordSchema, records[DEVICES.fsState]),
-            fsLoxGn2Transducers: parseRecord(fsLoxGn2TransducersRecordSchema, records[DEVICES.fsLoxGn2Transducers]),
-            fsInjectorTransducers: parseRecord(
-              fsInjectorTransducersRecordSchema,
-              records[DEVICES.fsInjectorTransducers],
-            ),
-            fsThermocouples: parseRecord(fsThermocouplesRecordSchema, records[DEVICES.fsThermocouples]),
-            loadCell1: parseRecord(loadCellRecordSchema, records[DEVICES.loadCell1]),
-            loadCell2: parseRecord(loadCellRecordSchema, records[DEVICES.loadCell2]),
-            radioGround: parseRecord(radioGroundRecordSchema, records[DEVICES.radioGround]),
-            relayCurrentMonitor: parseRecord(relayCurrentMonitorRecordSchema, records[DEVICES.relayCurrentMonitor]),
+            fsState: parseRecord(fsStateRecordSchema, fsStateRaw),
+            fsLoxGn2Transducers: parseRecord(fsLoxGn2TransducersRecordSchema, fsLoxGn2TransducersRaw),
+            fsInjectorTransducers: parseRecord(fsInjectorTransducersRecordSchema, fsInjectorTransducersRaw),
+            fsThermocouples: parseRecord(fsThermocouplesRecordSchema, fsThermocouplesRaw),
+            loadCell1: parseRecord(loadCellRecordSchema, loadCell1Raw),
+            loadCell2: parseRecord(loadCellRecordSchema, loadCell2Raw),
+            radioGround: parseRecord(radioGroundRecordSchema, radioGroundRaw),
+            relayCurrentMonitor: parseRecord(relayCurrentMonitorRecordSchema, relayCurrentMonitorRaw), // ADD THIS
           };
         },
         sendFsCommand: async (_context, event) => {
-          const e = event as { type: "SEND_FS_COMMAND"; value: FsCommandMessage };
           await catchError(
             api.messages.post({
               environmentKey,
               device: DEVICES.firingStation,
-              data: e.value,
+              data: event.value,
             }),
           );
-          console.log("Sent message", DEVICES.firingStation, e.value);
-          return [{ ts: new Date(), device: DEVICES.firingStation, data: e.value }];
+          console.log("Sent message", DEVICES.firingStation, event.value);
+          return [
+            {
+              ts: new Date(),
+              device: DEVICES.firingStation,
+              data: event.value,
+            },
+          ];
         },
         sendManualMessages: async (_, event) => {
-          const e = event as { type: "SEND_MANUAL_MESSAGES"; messages: PendingMessage[] };
           await Promise.all(
-            e.messages.map(async (message: PendingMessage) => {
+            event.messages.map(async (message) => {
               await catchError(
                 api.messages.post({
                   environmentKey,
@@ -379,7 +389,7 @@ export function createLaunchMachine(
             }),
           );
           const ts = new Date();
-          return e.messages.map((message: PendingMessage) => ({
+          return event.messages.map((message) => ({
             ts,
             device: message.device,
             data: message.data,
@@ -390,16 +400,44 @@ export function createLaunchMachine(
         hasPendingLaunchState: (context) => !!context.pendingLaunchState,
         canWrite: () => canWrite,
         canSendFsCommand: (context, event) => {
-          if (!canWrite) return false;
-          const e = event as { type: "SEND_FS_COMMAND"; value: FsCommandMessage };
-          const fsState = context.deviceStates.fsState;
-          if (e.value.command === "STATE_CUSTOM") return true;
-          if (fsState && e.value.command === fsStateToCommand(fsState.data.state)) return false;
-          if (e.value.command === "STATE_FIRE") {
-            if (!fsState) return false;
-            const state = fsState.data.state;
-            return state === "GN2_STANDBY" || state === "CUSTOM";
+          if (!canWrite) {
+            return false;
           }
+
+          const fsState = context.deviceStates.fsState;
+          const command = event.value;
+
+          if (!fsState) {
+            return false;
+          }
+
+          const currentState = fsState.data.state;
+
+          // Block run and press pilot commands when in GN2_FILL
+          if (currentState === "GN2_FILL") {
+            if (command.command === "STATE_FIRE_MANUAL_RUN" || command.command === "STATE_FIRE_MANUAL_PRESS_PILOT") {
+              return false;
+            }
+            // Also block STATE_CUSTOM commands that try to open these relays
+            if (command.command === "STATE_CUSTOM" && "run" in command && "press_pilot" in command) {
+              if (command.run || command.press_pilot) {
+                return false;
+              }
+            }
+          }
+
+          if (command.command === "STATE_CUSTOM") {
+            return true;
+          }
+
+          if (command.command === fsStateToCommand(currentState)) {
+            return false;
+          }
+
+          if (command.command === "STATE_FIRE") {
+            return currentState === "GN2_STANDBY" || currentState === "CUSTOM";
+          }
+
           return true;
         },
       },

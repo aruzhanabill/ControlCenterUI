@@ -1,4 +1,3 @@
-/* eslint-disable react-perf/jsx-no-new-function-as-prop */
 import { memo, useCallback, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
@@ -50,12 +49,30 @@ export const ModeNav = memo(function ModeNav({ currentPath }: Props) {
   const openHealth = useCallback(() => setHealthOpen(true), []);
   const closeHealth = useCallback(() => setHealthOpen(false), []);
   const toggleUtils = useCallback(() => setUtilsOpen((prev) => !prev), []);
+  const closeUtils = useCallback(() => setUtilsOpen(false), []);
 
   const msSinceBoot = useLaunchMachineSelector(
     (state) => state.context.deviceStates.fsState?.data.ms_since_boot ?? null,
   );
   const uptimeSeconds =
     msSinceBoot !== null ? Math.floor(msSinceBoot / 1000) : null;
+
+  const pilotPressure = useTelemetryStore(
+    (state) => state.buffers.get("pilot_pres_psi")?.getLatest()?.value ?? null,
+  );
+
+  const copv1Pressure = useTelemetryStore(
+    (state) => state.buffers.get("copv_1_psi")?.getLatest()?.value ?? null,
+  );
+
+  const copv2Pressure = useTelemetryStore(
+    (state) => state.buffers.get("copv_2_psi")?.getLatest()?.value ?? null,
+  );
+
+  const pilotHigh = pilotPressure !== null && pilotPressure > 460;
+  const copv1High = copv1Pressure !== null && copv1Pressure > 4400;
+  const copv2High = copv2Pressure !== null && copv2Pressure > 4400;
+  const anyWarning = pilotHigh || copv1High || copv2High;
 
   const canSend = useLaunchMachineSelector((state) =>
     state.can({ type: "SEND_MANUAL_MESSAGES", messages: [] }),
@@ -103,6 +120,7 @@ export const ModeNav = memo(function ModeNav({ currentPath }: Props) {
             Rocket Control Center
           </div>
 
+          {/* Connection status */}
           <div
             className={`ml-4 flex items-center gap-2 px-3 py-1 rounded-full text-xs ${
               connected
@@ -119,6 +137,23 @@ export const ModeNav = memo(function ModeNav({ currentPath }: Props) {
           <div className="px-3 py-1 ml-2 text-xs rounded-full bg-gray-bg-2 text-gray-text-dim tabular-nums">
             FS UP: {uptimeSeconds !== null ? `${uptimeSeconds}s` : "—"}
           </div>
+
+          {/* Pressure warnings */}
+          {anyWarning && (
+            <div className="flex items-center px-3 py-1 ml-2 text-xs border-2 rounded-full bg-yellow-bg text-yellow-text border-yellow-solid gap-2">
+              <span>⚠</span>
+              <span className="font-semibold">
+                PRESSURE{" "}
+                {[
+                  pilotHigh && "PILOT",
+                  copv1High && "COPV1",
+                  copv2High && "COPV2",
+                ]
+                  .filter(Boolean)
+                  .join(", ")}
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -143,6 +178,7 @@ export const ModeNav = memo(function ModeNav({ currentPath }: Props) {
             DATA DISPLAY
           </Link>
 
+          {/* Utilities Dropdown */}
           <div className="relative">
             <button
               onClick={toggleUtils}
@@ -153,10 +189,7 @@ export const ModeNav = memo(function ModeNav({ currentPath }: Props) {
 
             {utilsOpen && (
               <>
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={() => setUtilsOpen(false)}
-                />
+                <div className="fixed inset-0 z-40" onClick={closeUtils} />
                 <div className="absolute right-0 z-50 w-64 p-3 mt-2 bg-white border rounded-lg shadow-xl border-gray-border">
                   <div className="flex flex-col gap-2">
                     <button
