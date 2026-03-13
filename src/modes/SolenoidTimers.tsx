@@ -1,145 +1,231 @@
 import { memo, useCallback, useEffect, useState } from "react";
 
-import { useLaunchMachineSelector } from "@/components/launchMachineProvider";
+import {
+  useLaunchMachineActorRef,
+  useLaunchMachineSelector,
+} from "@/components/launchMachineProvider";
 
-interface SolenoidTimer {
-  label: string;
-  field:
-    | "gn2_drain"
-    | "gn2_fill"
-    | "depress"
-    | "press_pilot"
-    | "run"
-    | "lox_fill"
-    | "lox_disconnect"
-    | "igniter";
-  state: boolean;
-  elapsedMs: number;
-}
+type SolenoidField =
+  | "gn2_drain"
+  | "gn2_fill"
+  | "depress"
+  | "press_pilot"
+  | "run"
+  | "lox_fill"
+  | "lox_disconnect"
+  | "igniter"
+  | "ereg_power";
 
-const SOLENOID_LABELS: Record<string, string> = {
+const SOLENOID_LABELS: Record<SolenoidField, string> = {
   gn2_drain: "GN2 Drain",
   gn2_fill: "GN2 Fill",
   depress: "Depress",
   press_pilot: "Press Pilot",
   run: "Run",
   lox_fill: "LOX Fill",
-  lox_disconnect: "LOX Disc",
+  lox_disconnect: "LOX Disconnect",
   igniter: "Igniter",
+  ereg_power: "EREG Power",
 };
 
+interface ActiveTimer {
+  field: SolenoidField;
+  endTime: number;
+}
+
 interface SolenoidRowProps {
-  timer: SolenoidTimer;
-  onReset: (field: SolenoidTimer["field"]) => void;
+  field: SolenoidField;
+  label: string;
+  activeTimer: ActiveTimer | null;
+  onStart: (field: SolenoidField, durationSec: number) => void;
+  onStop: (field: SolenoidField) => void;
 }
 
 const SolenoidRow = memo(function SolenoidRow({
-  timer,
-  onReset,
+  field,
+  label,
+  activeTimer,
+  onStart,
+  onStop,
 }: SolenoidRowProps) {
-  const handleReset = useCallback(() => {
-    onReset(timer.field);
-  }, [timer.field, onReset]);
+  const [duration, setDuration] = useState("5");
+  const [, forceUpdate] = useState(0);
 
-  const seconds = Math.floor(timer.elapsedMs / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const displaySeconds = seconds % 60;
+  const isActive = activeTimer?.field === field;
+  const remainingMs = isActive
+    ? Math.max(0, activeTimer!.endTime - Date.now())
+    : 0;
+  const remainingSec = Math.ceil(remainingMs / 1000);
 
-  const timeDisplay =
-    minutes > 0
-      ? `${minutes}:${displaySeconds.toString().padStart(2, "0")}`
-      : `${seconds}s`;
+  useEffect(() => {
+    if (!isActive) return;
+    const interval = setInterval(() => {
+      forceUpdate((n) => n + 1);
+    }, 100);
+    return () => clearInterval(interval);
+  }, [isActive]);
+
+  const handleStart = useCallback(() => {
+    const durationSec = parseFloat(duration);
+    if (isNaN(durationSec) || durationSec <= 0) return;
+    onStart(field, durationSec);
+  }, [field, duration, onStart]);
+
+  const handleStop = useCallback(() => {
+    onStop(field);
+  }, [field, onStop]);
+
+  const handleDurationChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setDuration(e.target.value);
+    },
+    [],
+  );
 
   return (
-    <div className="flex items-center justify-between px-2 py-1 border rounded border-gray-border bg-gray-el-bg">
-      <div className="flex items-center flex-1 min-w-0 gap-2">
-        <div
-          className={`w-2 h-2 rounded-full shrink-0 ${timer.state ? "bg-green-solid" : "bg-gray-solid"}`}
-        />
-        <span className="text-xs truncate text-gray-text">{timer.label}</span>
-      </div>
-      <div className="flex items-center gap-2 shrink-0">
-        <span className="font-mono text-xs text-right text-gray-text-dim tabular-nums min-w-[3rem]">
-          {timeDisplay}
-        </span>
-        <button
-          onClick={handleReset}
-          className="px-2 text-xs text-white rounded py-0.5 bg-blue-solid hover:bg-blue-solid-hover transition-colors"
-        >
-          ↻
-        </button>
-      </div>
+    <div className="flex items-center px-2 border rounded gap-2 py-1.5 border-gray-border bg-gray-el-bg">
+      <div
+        className={`w-2 h-2 rounded-full shrink-0 ${isActive ? "bg-green-solid" : "bg-gray-solid"}`}
+      />
+
+      <span className="text-xs text-gray-text min-w-[100px]">{label}</span>
+
+      {!isActive ? (
+        <>
+          <input
+            type="number"
+            value={duration}
+            onChange={handleDurationChange}
+            min="0.1"
+            step="0.1"
+            className="w-16 px-2 font-mono text-xs text-center border rounded py-0.5 bg-gray-bg border-gray-border text-gray-text"
+            placeholder="sec"
+          />
+          <button
+            onClick={handleStart}
+            className="px-3 text-xs text-white rounded py-0.5 bg-green-solid hover:bg-green-solid-hover transition-colors"
+          >
+            Start
+          </button>
+        </>
+      ) : (
+        <>
+          <span className="font-mono text-xs font-bold text-center text-green-text tabular-nums min-w-[3rem]">
+            {remainingSec}s
+          </span>
+          <button
+            onClick={handleStop}
+            className="px-3 text-xs text-white rounded py-0.5 bg-red-solid hover:bg-red-solid-hover transition-colors"
+          >
+            Stop
+          </button>
+        </>
+      )}
     </div>
   );
 });
 
 export const SolenoidTimers = memo(function SolenoidTimers() {
+  const launchActorRef = useLaunchMachineActorRef();
   const fsState = useLaunchMachineSelector(
     (state) => state.context.deviceStates.fsState?.data,
   );
 
-  const [stateTimestamps, setStateTimestamps] = useState<
-    Record<string, number>
-  >({});
-  const [, forceUpdate] = useState(0);
+  const [activeTimer, setActiveTimer] = useState<ActiveTimer | null>(null);
 
   useEffect(() => {
-    if (!fsState) return;
+    if (!activeTimer || !fsState) return;
 
-    const now = Date.now();
-    const fields: Array<SolenoidTimer["field"]> = [
-      "gn2_drain",
-      "gn2_fill",
-      "depress",
-      "press_pilot",
-      "run",
-      "lox_fill",
-      "lox_disconnect",
-      "igniter",
-    ];
+    const checkTimer = () => {
+      if (Date.now() >= activeTimer.endTime) {
+        console.log(`Timer expired for ${activeTimer.field}, closing valve`);
 
-    setStateTimestamps((prev) => {
-      const next = { ...prev };
-      let changed = false;
+        launchActorRef.send({
+          type: "SEND_FS_COMMAND",
+          value: {
+            command: "STATE_CUSTOM",
+            gn2_drain:
+              activeTimer.field === "gn2_drain" ? false : fsState.gn2_drain,
+            gn2_fill:
+              activeTimer.field === "gn2_fill" ? false : fsState.gn2_fill,
+            depress: activeTimer.field === "depress" ? false : fsState.depress,
+            press_pilot:
+              activeTimer.field === "press_pilot" ? false : fsState.press_pilot,
+            run: activeTimer.field === "run" ? false : fsState.run,
+            lox_fill:
+              activeTimer.field === "lox_fill" ? false : fsState.lox_fill,
+            lox_disconnect:
+              activeTimer.field === "lox_disconnect"
+                ? false
+                : fsState.lox_disconnect,
+            igniter: activeTimer.field === "igniter" ? false : fsState.igniter,
+            ereg_power:
+              activeTimer.field === "ereg_power" ? false : fsState.ereg_power,
+          },
+        });
 
-      fields.forEach((field) => {
-        const currentState = fsState[field];
-        const key = `${field}_${currentState}`;
+        setActiveTimer(null);
+      }
+    };
 
-        if (!(key in prev)) {
-          next[key] = now;
-          changed = true;
-        }
+    const interval = setInterval(checkTimer, 100);
+    return () => clearInterval(interval);
+  }, [activeTimer, fsState, launchActorRef]);
 
-        const oppositeKey = `${field}_${!currentState}`;
-        if (oppositeKey in prev) {
-          delete next[oppositeKey];
-          changed = true;
-        }
+  const handleStart = useCallback(
+    (field: SolenoidField, durationSec: number) => {
+      if (!fsState) return;
+
+      // Open the valve
+      launchActorRef.send({
+        type: "SEND_FS_COMMAND",
+        value: {
+          command: "STATE_CUSTOM",
+          gn2_drain: field === "gn2_drain" ? true : fsState.gn2_drain,
+          gn2_fill: field === "gn2_fill" ? true : fsState.gn2_fill,
+          depress: field === "depress" ? true : fsState.depress,
+          press_pilot: field === "press_pilot" ? true : fsState.press_pilot,
+          run: field === "run" ? true : fsState.run,
+          lox_fill: field === "lox_fill" ? true : fsState.lox_fill,
+          lox_disconnect:
+            field === "lox_disconnect" ? true : fsState.lox_disconnect,
+          igniter: field === "igniter" ? true : fsState.igniter,
+          ereg_power: field === "ereg_power" ? true : fsState.ereg_power,
+        },
       });
 
-      return changed ? next : prev;
-    });
-  }, [fsState]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      forceUpdate((n) => n + 1);
-    }, 100);
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleReset = useCallback(
-    (field: SolenoidTimer["field"]) => {
-      if (!fsState) return;
-      const currentState = fsState[field];
-      const key = `${field}_${currentState}`;
-      setStateTimestamps((prev) => ({
-        ...prev,
-        [key]: Date.now(),
-      }));
+      setActiveTimer({
+        field,
+        endTime: Date.now() + durationSec * 1000,
+      });
     },
-    [fsState],
+    [fsState, launchActorRef],
+  );
+
+  const handleStop = useCallback(
+    (field: SolenoidField) => {
+      if (!fsState) return;
+
+      launchActorRef.send({
+        type: "SEND_FS_COMMAND",
+        value: {
+          command: "STATE_CUSTOM",
+          gn2_drain: field === "gn2_drain" ? false : fsState.gn2_drain,
+          gn2_fill: field === "gn2_fill" ? false : fsState.gn2_fill,
+          depress: field === "depress" ? false : fsState.depress,
+          press_pilot: field === "press_pilot" ? false : fsState.press_pilot,
+          run: field === "run" ? false : fsState.run,
+          lox_fill: field === "lox_fill" ? false : fsState.lox_fill,
+          lox_disconnect:
+            field === "lox_disconnect" ? false : fsState.lox_disconnect,
+          igniter: field === "igniter" ? false : fsState.igniter,
+          ereg_power: field === "ereg_power" ? false : fsState.ereg_power,
+        },
+      });
+
+      setActiveTimer(null);
+    },
+    [fsState, launchActorRef],
   );
 
   if (!fsState) {
@@ -152,8 +238,7 @@ export const SolenoidTimers = memo(function SolenoidTimers() {
     );
   }
 
-  const now = Date.now();
-  const fields: Array<SolenoidTimer["field"]> = [
+  const fields: SolenoidField[] = [
     "gn2_drain",
     "gn2_fill",
     "depress",
@@ -162,28 +247,24 @@ export const SolenoidTimers = memo(function SolenoidTimers() {
     "lox_fill",
     "lox_disconnect",
     "igniter",
+    "ereg_power",
   ];
-
-  const timers: SolenoidTimer[] = fields.map((field) => {
-    const state = fsState[field];
-    const key = `${field}_${state}`;
-    const timestamp = stateTimestamps[key] || now;
-    const elapsedMs = now - timestamp;
-
-    return {
-      label: SOLENOID_LABELS[field],
-      field,
-      state,
-      elapsedMs,
-    };
-  });
 
   return (
     <div className="flex flex-col p-3 border bg-gray-el-bg rounded-xl border-gray-border gap-2">
-      <p className="mb-1 text-sm font-bold text-gray-text">Solenoid timers</p>
+      <p className="mb-1 text-sm font-bold text-gray-text">
+        Solenoid Countdown Timers
+      </p>
       <div className="grid grid-cols-2 gap-1.5">
-        {timers.map((timer) => (
-          <SolenoidRow key={timer.field} timer={timer} onReset={handleReset} />
+        {fields.map((field) => (
+          <SolenoidRow
+            key={field}
+            field={field}
+            label={SOLENOID_LABELS[field]}
+            activeTimer={activeTimer}
+            onStart={handleStart}
+            onStop={handleStop}
+          />
         ))}
       </div>
     </div>
