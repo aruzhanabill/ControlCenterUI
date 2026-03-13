@@ -1,10 +1,9 @@
-import { memo, useCallback, useMemo } from "react";
+import { memo, useCallback } from "react";
 
 import {
   useLaunchMachineActorRef,
   useLaunchMachineSelector,
 } from "@/components/launchMachineProvider";
-import { useTelemetryStore } from "@/stores/telemetryStore";
 
 type EregCommand = "EREG_CLOSED" | "EREG_STAGE_1" | "EREG_STAGE_2";
 
@@ -61,6 +60,15 @@ const COLORS = {
   },
 };
 
+// Gain presets matching firmware defaults and variations
+const GAIN_PRESETS = [
+  { label: "Aggressive", kp: 0.45, ki: 3.0, kd: 0.015 },
+  { label: "Default", kp: 0.35, ki: 2.5, kd: 0.01 },
+  { label: "Moderate", kp: 0.28, ki: 2.0, kd: 0.008 },
+  { label: "Conservative", kp: 0.2, ki: 1.5, kd: 0.005 },
+  { label: "Slow", kp: 0.15, ki: 1.0, kd: 0.003 },
+];
+
 interface StageButtonProps {
   stage: StageConfig;
   isActive: boolean;
@@ -103,10 +111,38 @@ const StageButton = memo(function StageButton({
   );
 });
 
+interface GainButtonProps {
+  label: string;
+  kp: number;
+  ki: number;
+  kd: number;
+  onSend: (kp: number, ki: number, kd: number) => void;
+}
+
+const GainButton = memo(function GainButton({
+  label,
+  kp,
+  ki,
+  kd,
+  onSend,
+}: GainButtonProps) {
+  const handleClick = useCallback(() => {
+    onSend(kp, ki, kd);
+  }, [kp, ki, kd, onSend]);
+
+  return (
+    <button
+      onClick={handleClick}
+      className="px-2 py-1 text-xs border rounded bg-gray-el-bg hover:bg-gray-el-bg-hover text-gray-text border-gray-border transition-all"
+      title={`Kp=${kp}, Ki=${ki}, Kd=${kd}`}
+    >
+      {label}
+    </button>
+  );
+});
+
 export const ElectronicsRegulator = memo(function ElectronicsRegulator() {
   const launchActorRef = useLaunchMachineActorRef();
-  const telemetryStore = useTelemetryStore();
-
   const eregData = useLaunchMachineSelector(
     (state) => state.context.deviceStates.fsLoxGn2Transducers?.data ?? null,
   );
@@ -144,57 +180,24 @@ export const ElectronicsRegulator = memo(function ElectronicsRegulator() {
     [launchActorRef],
   );
 
+  const sendGains = useCallback(
+    (kp: number, ki: number, kd: number) => {
+      console.log(`Setting EREG gains: Kp=${kp}, Ki=${ki}, Kd=${kd}`);
+      launchActorRef.send({
+        type: "SEND_FS_COMMAND",
+        value: { command: "EREG_SET_GAINS", kp, ki, kd },
+      });
+    },
+    [launchActorRef],
+  );
+
   const activeStage = STAGE_CONFIGS.find(
     (s) => eregData?.[s.activeField] ?? false,
   );
 
-  const pressureWarnings = useMemo(() => {
-    const now = Date.now() * 1000;
-    const recentTime = now - 5 * 1e6;
-
-    const copv1Samples = telemetryStore.getSamples(
-      "copv_1_psi",
-      recentTime,
-      now,
-    );
-    const copv2Samples = telemetryStore.getSamples(
-      "copv_2_psi",
-      recentTime,
-      now,
-    );
-    const oxtank1Samples = telemetryStore.getSamples(
-      "oxtank_1_psi",
-      recentTime,
-      now,
-    );
-    const oxtank2Samples = telemetryStore.getSamples(
-      "oxtank_2_psi",
-      recentTime,
-      now,
-    );
-
-    const copv1 = copv1Samples[copv1Samples.length - 1]?.value ?? 0;
-    const copv2 = copv2Samples[copv2Samples.length - 1]?.value ?? 0;
-    const oxtank1 = oxtank1Samples[oxtank1Samples.length - 1]?.value ?? 0;
-    const oxtank2 = oxtank2Samples[oxtank2Samples.length - 1]?.value ?? 0;
-
-    const copvDiff = Math.abs(copv1 - copv2);
-    const oxtankDiff = Math.abs(oxtank1 - oxtank2);
-
-    const warnings = [];
-
-    if (copvDiff > 50) {
-      warnings.push(`COPV 1-2: ${copvDiff.toFixed(0)} PSI`);
-    }
-    if (oxtankDiff > 50) {
-      warnings.push(`Oxtank 1-2: ${oxtankDiff.toFixed(0)} PSI`);
-    }
-
-    return warnings;
-  }, [telemetryStore]);
-
   return (
     <div className="flex flex-col p-4 border bg-gray-bg-1 rounded-xl border-gray-border gap-3">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <p className="text-lg font-bold text-gray-text">
           Electronics regulator
@@ -212,15 +215,7 @@ export const ElectronicsRegulator = memo(function ElectronicsRegulator() {
         </div>
       </div>
 
-      {pressureWarnings.length > 0 && (
-        <div className="flex items-center px-2 py-1 border rounded-md bg-red-bg border-red-border gap-2">
-          <span className="text-xs text-red-text">🚩</span>
-          <div className="flex-1 text-xs text-red-text">
-            {pressureWarnings.join(" • ")}
-          </div>
-        </div>
-      )}
-
+      {/* Current state */}
       <div className="flex items-center justify-between px-3 py-2 border rounded-lg bg-gray-el-bg border-gray-border">
         <span className="text-xs text-gray-text-dim">Current state</span>
         {eregData ? (
@@ -239,6 +234,7 @@ export const ElectronicsRegulator = memo(function ElectronicsRegulator() {
         )}
       </div>
 
+      {/* Stage buttons */}
       <div className="flex flex-col gap-2">
         {STAGE_CONFIGS.map((stage) => (
           <StageButton
@@ -249,6 +245,22 @@ export const ElectronicsRegulator = memo(function ElectronicsRegulator() {
             onCommand={sendCommand}
           />
         ))}
+      </div>
+
+      <div className="pt-2 border-t border-gray-border">
+        <p className="mb-2 text-xs text-gray-text-dim">PID gain presets</p>
+        <div className="flex flex-wrap gap-1.5">
+          {GAIN_PRESETS.map((preset) => (
+            <GainButton
+              key={preset.label}
+              label={preset.label}
+              kp={preset.kp}
+              ki={preset.ki}
+              kd={preset.kd}
+              onSend={sendGains}
+            />
+          ))}
+        </div>
       </div>
 
       {!canSendStage1 && !canSendStage2 && !canSendClosed && (

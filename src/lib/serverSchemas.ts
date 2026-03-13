@@ -26,11 +26,13 @@ export const fsCommandSchema = z.enum([
   "STATE_FIRE",
   "STATE_FIRE_MANUAL_PRESS_PILOT",
   "STATE_FIRE_MANUAL_DOME_PILOT_CLOSE",
+  "STATE_FIRE_MANUAL_DOME_PILOT_OPEN",
   "STATE_FIRE_MANUAL_IGNITER",
   "STATE_FIRE_MANUAL_RUN",
   "EREG_CLOSED",
   "EREG_STAGE_1",
   "EREG_STAGE_2",
+  "EREG_SET_GAINS",
   "RECALIBRATE_TRANSDUCERS",
   "RESTART",
 ]);
@@ -50,12 +52,20 @@ const customFsCommandMessageSchema = z.object({
   ereg_power: z.boolean(),
 });
 
+const eregSetGainsMessageSchema = z.object({
+  command: z.literal("EREG_SET_GAINS"),
+  kp: z.number(),
+  ki: z.number(),
+  kd: z.number(),
+});
+
 const baseFsCommandMessageSchema = z.object({
-  command: fsCommandSchema.exclude(["STATE_CUSTOM"]),
+  command: fsCommandSchema.exclude(["STATE_CUSTOM", "EREG_SET_GAINS"]),
 });
 
 export const fsCommandMessageSchema = z.discriminatedUnion("command", [
   customFsCommandMessageSchema,
+  eregSetGainsMessageSchema,
   baseFsCommandMessageSchema,
 ]);
 
@@ -91,6 +101,11 @@ export const fsStateRecordSchema = z.object({
   run: z.boolean(),
   igniter: z.boolean(),
   ereg_power: z.boolean(),
+  gn2_abort: z.boolean(),
+  pilot_vent: z.boolean(),
+  dome_pilot_open: z.boolean(),
+  five_two: z.boolean(),
+  water_suppression: z.boolean(),
 });
 
 export type FsStateRecord = z.infer<typeof fsStateRecordSchema>;
@@ -99,7 +114,6 @@ export const fsLoxGn2TransducersRecordSchema = z.object({
   ts: z.number(),
   oxtank_1: z.number(),
   oxtank_2: z.number(),
-  oxtank_3: z.number(),
   copv_1: z.number(),
   copv_2: z.number(),
   pilot_pres: z.number(),
@@ -107,6 +121,12 @@ export const fsLoxGn2TransducersRecordSchema = z.object({
   ereg_closed: z.boolean(),
   ereg_stage_1: z.boolean(),
   ereg_stage_2: z.boolean(),
+  oxtank_1_median: z.number(),
+  oxtank_2_median: z.number(),
+  copv_1_median: z.number(),
+  copv_2_median: z.number(),
+  pilot_pres_median: z.number(),
+  qd_pres_median: z.number(),
 });
 
 export type FsLoxGn2TransducersRecord = z.infer<
@@ -118,6 +138,9 @@ export const fsInjectorTransducersRecordSchema = z.object({
   injector_1: z.number(),
   injector_2: z.number(),
   upper_cc: z.number(),
+  injector_manifold_1: z.number(),
+  injector_manifold_1_median: z.number(),
+  injector_manifold_2_median: z.number(),
 });
 
 export type FsInjectorTransducersRecord = z.infer<
@@ -131,6 +154,9 @@ export const fsThermocouplesRecordSchema = z.object({
   lox_upper_celsius: z.number(),
   lox_lower_celsius: z.number(),
   dummy: z.number(),
+  lox_celsius: z.number(),
+  gn2_celsius: z.number(),
+  gn2_surface_celsius: z.number(),
 });
 
 export type FsThermocouplesRecord = z.infer<typeof fsThermocouplesRecordSchema>;
