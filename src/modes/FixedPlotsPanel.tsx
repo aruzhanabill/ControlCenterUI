@@ -54,13 +54,16 @@ const X_AXIS_LABEL = {
   offset: -5,
   fontSize: 10,
 } as const;
+
 const Y_AXIS_TICK_STYLE = { fontSize: 10 } as const;
+
 const TOOLTIP_CONTENT_STYLE = {
   backgroundColor: "#fff",
   border: "1px solid #ccc",
   borderRadius: "4px",
   fontSize: "11px",
 } as const;
+
 const LEGEND_WRAPPER_STYLE = { fontSize: "10px" } as const;
 
 export const FixedPlotsPanel = memo(function FixedPlotsPanel() {
@@ -79,7 +82,6 @@ export const FixedPlotsPanel = memo(function FixedPlotsPanel() {
             <PulseFill />
             <MultiSignalPlot config={PLOT_CONFIGS[3]} />
           </div>
-
           <div className="flex flex-col gap-3">
             <MultiSignalPlot config={PLOT_CONFIGS[1]} />
             <MultiSignalPlot config={PLOT_CONFIGS[2]} />
@@ -152,45 +154,75 @@ const MultiSignalPlot = memo(function MultiSignalPlot({
       )}
 
       {hasData && (
-        <div style={{ height: `${config.height}px` }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData}>
-              <XAxis
-                dataKey="time"
-                stroke="#666"
-                tick={X_AXIS_TICK_STYLE}
-                tickCount={3}
-                label={X_AXIS_LABEL}
-              />
-              <YAxis
-                stroke="#666"
-                tick={Y_AXIS_TICK_STYLE}
-                tickCount={5}
-                width={45}
-              />
-              <Tooltip contentStyle={TOOLTIP_CONTENT_STYLE} />
-              <Legend
-                wrapperStyle={LEGEND_WRAPPER_STYLE}
-                align="left"
-                verticalAlign="top"
-                layout="vertical"
-                iconType="line"
-              />
-              {config.signals.map((signal) => (
-                <Line
-                  key={signal}
-                  type="monotone"
-                  dataKey={signal}
-                  name={SIGNAL_METADATA[signal].label}
-                  stroke={SIGNAL_METADATA[signal].color}
-                  strokeWidth={2}
-                  dot={false}
-                  isAnimationActive={false}
+        <>
+          <div style={{ height: `${config.height}px` }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData}>
+                <XAxis
+                  dataKey="time"
+                  stroke="#666"
+                  tick={X_AXIS_TICK_STYLE}
+                  tickCount={3}
+                  label={X_AXIS_LABEL}
                 />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+                <YAxis
+                  stroke="#666"
+                  tick={Y_AXIS_TICK_STYLE}
+                  tickCount={5}
+                  width={45}
+                />
+                <Tooltip contentStyle={TOOLTIP_CONTENT_STYLE} />
+                <Legend
+                  wrapperStyle={LEGEND_WRAPPER_STYLE}
+                  align="left"
+                  verticalAlign="top"
+                  layout="vertical"
+                  iconType="line"
+                />
+                {config.signals.map((signal) => (
+                  <Line
+                    key={signal}
+                    type="monotone"
+                    dataKey={signal}
+                    name={SIGNAL_METADATA[signal].label}
+                    stroke={SIGNAL_METADATA[signal].color}
+                    strokeWidth={2}
+                    dot={false}
+                    isAnimationActive={false}
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="flex flex-wrap pt-2 mt-2 border-t gap-3 border-gray-border">
+            {config.signals.map((signal) => {
+              const latestValue =
+                chartData.length > 0
+                  ? chartData[chartData.length - 1][signal]
+                  : null;
+              return (
+                <div key={signal} className="flex items-baseline gap-1.5">
+                  <div
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ backgroundColor: SIGNAL_METADATA[signal].color }}
+                  />
+                  <span className="text-xs text-gray-text-dim">
+                    {SIGNAL_METADATA[signal].label}:
+                  </span>
+                  <span className="font-mono text-xs font-semibold text-gray-text tabular-nums">
+                    {latestValue !== null && latestValue !== undefined
+                      ? latestValue.toFixed(1)
+                      : "--"}
+                  </span>
+                  <span className="text-xs text-gray-text-dim">
+                    {config.unit}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </>
       )}
     </div>
   );
