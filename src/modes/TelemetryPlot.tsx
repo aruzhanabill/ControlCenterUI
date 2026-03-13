@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Line,
   LineChart,
@@ -31,18 +31,48 @@ export const TelemetryPlot = memo(function TelemetryPlot({
 
   const metadata = SIGNAL_METADATA[signal];
 
-  const plotData = useMemo(() => {
-    const now = Date.now() * 1000;
-    const tstart = now - timeRange * 1e6;
-    const tend = now;
+  // Track the timestamp when pause was activated
+  const pausedTimestampRef = useRef<number | null>(null);
 
-    const samples = getSamples(signal, tstart, tend);
+  // Force re-renders when live to show fresh data
+  const [, forceUpdate] = useState(0);
 
-    return samples.map((sample) => ({
-      time: (sample.timestamp - now) / 1e6,
-      value: sample.value,
-    }));
-  }, [signal, timeRange, getSamples, paused]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (paused) return;
+
+    // Update every 100ms when live
+    const interval = setInterval(() => {
+      forceUpdate((n) => n + 1);
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [paused]);
+
+  useEffect(() => {
+    if (paused && pausedTimestampRef.current === null) {
+      // Capture timestamp when pausing
+      pausedTimestampRef.current = Date.now() * 1000;
+    } else if (!paused) {
+      // Clear when unpausing
+      pausedTimestampRef.current = null;
+    }
+  }, [paused]);
+
+  // Use frozen timestamp when paused, current time when live
+  const now =
+    paused && pausedTimestampRef.current !== null
+      ? pausedTimestampRef.current
+      : Date.now() * 1000;
+
+  const tstart = now - timeRange * 1e6;
+  const tend = now;
+
+  const samples = getSamples(signal, tstart, tend);
+
+  const plotData = samples.map((sample) => ({
+    time: (sample.timestamp - now) / 1e6,
+    value: sample.value,
+  }));
 
   const handleTimeRangeChange = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -84,7 +114,6 @@ export const TelemetryPlot = memo(function TelemetryPlot({
 
   return (
     <div className="p-4 border rounded-lg bg-gray-el-bg border-gray-border">
-      {}
       <div className="flex items-center justify-between mb-3 gap-2">
         <div className="flex items-center flex-1 min-w-0 gap-3">
           <div
