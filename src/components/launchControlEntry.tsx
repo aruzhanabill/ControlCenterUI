@@ -17,7 +17,6 @@ export type LaunchControlEntryState =
   | "not-started"
   | "executing"
   | "stopped";
-
 type Props = {
   label: string;
   isAbort?: boolean;
@@ -25,8 +24,8 @@ type Props = {
 } & (
   | {
       type: "fs-command";
-      executeCommand: Exclude<FsCommand, "STATE_CUSTOM">;
-      stopCommand: Exclude<FsCommand, "STATE_CUSTOM"> | null;
+      executeCommand: Exclude<FsCommand, "STATE_CUSTOM" | "EREG_SET_GAINS">;
+      stopCommand: Exclude<FsCommand, "STATE_CUSTOM" | "EREG_SET_GAINS"> | null;
       field?: undefined;
     }
   | {
@@ -36,7 +35,6 @@ type Props = {
       field: keyof LaunchState["armStatus"];
     }
 );
-
 export const LaunchControlEntry = memo(function LaunchControlEntry({
   label,
   isAbort = false,
@@ -44,33 +42,40 @@ export const LaunchControlEntry = memo(function LaunchControlEntry({
   ...rest
 }: Props) {
   const launchActorRef = useLaunchMachineActorRef();
-
   const executeEvent = useMemo<LaunchMachineEvent>(
     () =>
       rest.type === "fs-command"
-        ? { type: "SEND_FS_COMMAND", value: { command: rest.executeCommand } }
-        : { type: "UPDATE_ARM_STATUS", data: { [rest.field]: true } },
+        ? ({
+            type: "SEND_FS_COMMAND",
+            value: { command: rest.executeCommand },
+          } as LaunchMachineEvent)
+        : ({
+            type: "UPDATE_ARM_STATUS",
+            data: { [rest.field]: true },
+          } as unknown as LaunchMachineEvent),
     [rest.executeCommand, rest.field, rest.type],
   );
-
   const stopEvent = useMemo<LaunchMachineEvent | null>(
     () =>
       rest.type === "fs-command"
         ? rest.stopCommand != null
-          ? { type: "SEND_FS_COMMAND", value: { command: rest.stopCommand } }
+          ? ({
+              type: "SEND_FS_COMMAND",
+              value: { command: rest.stopCommand },
+            } as LaunchMachineEvent)
           : null
-        : { type: "UPDATE_ARM_STATUS", data: { [rest.field]: false } },
+        : ({
+            type: "UPDATE_ARM_STATUS",
+            data: { [rest.field]: false },
+          } as unknown as LaunchMachineEvent),
     [rest.field, rest.stopCommand, rest.type],
   );
-
   const executeDisabled = useLaunchMachineSelector(
     (state) => !state.can(executeEvent),
   );
-
   const stopDisabled = useLaunchMachineSelector(
     (state) => state.can(executeEvent) || !stopEvent || !state.can(stopEvent),
   );
-
   const isExecuting = useLaunchMachineSelector((state) =>
     rest.type === "fs-command"
       ? !!state.context.deviceStates.fsState &&
@@ -78,26 +83,21 @@ export const LaunchControlEntry = memo(function LaunchControlEntry({
           rest.executeCommand
       : state.context.launchState.armStatus[rest.field],
   );
-
   const handleExecute = useCallback(() => {
     launchActorRef.send(executeEvent);
   }, [executeEvent, launchActorRef]);
-
   const handleStop = useCallback(() => {
     if (stopEvent) {
       launchActorRef.send(stopEvent);
     }
   }, [launchActorRef, stopEvent]);
-
   const isInState = useLaunchMachineSelector(
     (state) =>
       !!state.context.deviceStates.fsState &&
       fsStateToCommand(state.context.deviceStates.fsState.data.state) ===
         rest.executeCommand,
   );
-
   const fade = fadeIfDisabled && executeDisabled && !isInState;
-
   return (
     <div
       className={twMerge(
