@@ -28,7 +28,6 @@ const Entry = memo(function Entry({
   );
 
   const checked = !!fsState?.[field];
-
   const hasPending = pendingRelays != null;
 
   const handleChange = useCallback(() => {
@@ -67,7 +66,6 @@ const Entry = memo(function Entry({
 
 export const RelaysGroup = memo(function RelaysGroup() {
   const launchActorRef = useLaunchMachineActorRef();
-
   const [pendingRelays, setPendingRelays] = useState<RelaysState | null>(null);
 
   const setPendingRelaysDisabled = useLaunchMachineSelector(
@@ -85,7 +83,6 @@ export const RelaysGroup = memo(function RelaysGroup() {
 
   const handleSetPendingRelays = useCallback(() => {
     if (pendingRelays == null) return;
-
     launchActorRef.send({
       type: "SEND_FS_COMMAND",
       value: { command: "STATE_CUSTOM", ...pendingRelays },
@@ -113,16 +110,16 @@ export const RelaysGroup = memo(function RelaysGroup() {
           </Button>
         </div>
       )}
-
       <div className="flex flex-wrap items-center gap-4">
-        <Entry label="GN2 Abort" field="gn2_abort" pr={pr} spr={spr} />
+        <Entry label="GN2 Drain" field="gn2_drain" pr={pr} spr={spr} />
         <Entry label="GN2 Fill" field="gn2_fill" pr={pr} spr={spr} />
-        <Entry label="Pilot Vent" field="pilot_vent" pr={pr} spr={spr} />
-        <Entry label="Dome Pilot" field="dome_pilot_open" pr={pr} spr={spr} />
+        <Entry label="Depress" field="depress" pr={pr} spr={spr} />
+        <Entry label="Press Pilot" field="press_pilot" pr={pr} spr={spr} />
         <Entry label="Run" field="run" pr={pr} spr={spr} />
-        <Entry label="Five Two" field="five_two" pr={pr} spr={spr} />
-        <Entry label="Water" field="water_suppression" pr={pr} spr={spr} />
+        <Entry label="LOx Fill" field="lox_fill" pr={pr} spr={spr} />
+        <Entry label="LOx Disc" field="lox_disconnect" pr={pr} spr={spr} />
         <Entry label="Igniter" field="igniter" pr={pr} spr={spr} />
+        <Entry label="EREG Power" field="ereg_power" pr={pr} spr={spr} />
       </div>
     </div>
   );
