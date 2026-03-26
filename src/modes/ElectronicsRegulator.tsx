@@ -115,6 +115,7 @@ interface GainButtonProps {
   kp: number;
   ki: number;
   kd: number;
+  canSend: boolean;
   onSend: (kp: number, ki: number, kd: number) => void;
 }
 
@@ -123,6 +124,7 @@ const GainButton = memo(function GainButton({
   kp,
   ki,
   kd,
+  canSend,
   onSend,
 }: GainButtonProps) {
   const handleClick = useCallback(() => {
@@ -132,7 +134,8 @@ const GainButton = memo(function GainButton({
   return (
     <button
       onClick={handleClick}
-      className="flex flex-col items-center px-2 py-1 text-xs border rounded bg-gray-el-bg hover:bg-gray-el-bg-hover text-gray-text border-gray-border transition-all gap-0.5"
+      disabled={!canSend}
+      className={`flex flex-col items-center px-2 py-1 text-xs border rounded bg-gray-el-bg text-gray-text border-gray-border transition-all gap-0.5 ${canSend ? "hover:bg-gray-el-bg-hover" : "opacity-50 cursor-not-allowed"}`}
     >
       <span className="font-semibold">{label}</span>
       <span className="font-mono leading-none text-[10px] text-gray-text-dim">
@@ -193,10 +196,11 @@ export const ElectronicsRegulator = memo(function ElectronicsRegulator() {
 
   const sendGains = useCallback(
     (kp: number, ki: number, kd: number) => {
-      launchActorRef.send({
-        type: "SEND_FS_COMMAND",
-        value: { command: "EREG_SET_GAINS", kp, ki, kd },
-      });
+      const value = { command: "EREG_SET_GAINS" as const, kp, ki, kd };
+      launchActorRef.send({ type: "SEND_FS_COMMAND", value });
+      setTimeout(() => {
+        launchActorRef.send({ type: "SEND_FS_COMMAND", value });
+      }, 200);
       console.log(`Sent EREG gains: Kp=${kp}, Ki=${ki}, Kd=${kd}`);
     },
     [launchActorRef],
@@ -265,6 +269,7 @@ export const ElectronicsRegulator = memo(function ElectronicsRegulator() {
               kp={preset.kp}
               ki={preset.ki}
               kd={preset.kd}
+              canSend={canWrite && fsStateExists}
               onSend={sendGains}
             />
           ))}
