@@ -170,7 +170,8 @@ export const ElectronicsRegulator = memo(function ElectronicsRegulator() {
   );
 
   const isEregClosed = eregData?.ereg_closed ?? false;
-  const canSendClosed = fsStateExists && !isEregClosed;
+  const canWrite = canSendStage1 || canSendStage2;
+  const canSendClosed = canWrite && fsStateExists && !isEregClosed;
 
   const canSendMap: Record<EregCommand, boolean> = {
     EREG_STAGE_1: canSendStage1,
@@ -181,6 +182,11 @@ export const ElectronicsRegulator = memo(function ElectronicsRegulator() {
   const sendCommand = useCallback(
     (command: EregCommand) => {
       launchActorRef.send({ type: "SEND_FS_COMMAND", value: { command } });
+      if (command === "EREG_CLOSED") {
+        setTimeout(() => {
+          launchActorRef.send({ type: "SEND_FS_COMMAND", value: { command } });
+        }, 200);
+      }
     },
     [launchActorRef],
   );
