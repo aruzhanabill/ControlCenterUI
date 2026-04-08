@@ -32,10 +32,12 @@ export const SIGNAL_METADATA: Record<
   SignalType,
   { label: string; unit: string; color: string }
 > = {
-  oxtank_1_psi: { label: "Oxtank 1", unit: "PSI", color: "#00d4ff" },
-  oxtank_2_psi: { label: "Oxtank 2", unit: "PSI", color: "#00b4d8" },
   copv_1_psi: { label: "COPV 1", unit: "PSI", color: "#8338ec" },
-  copv_2_psi: { label: "COPV 2", unit: "PSI", color: "#3a86ff" },
+  copv_2_psi: { label: "COPV 2", unit: "PSI", color: "#8338ec" },
+
+  oxtank_1_psi: { label: "Oxtank 1", unit: "PSI", color: "#00d4ff" },
+  oxtank_2_psi: { label: "Oxtank 2", unit: "PSI", color: "#00d4ff" },
+
   pilot_pres_psi: { label: "Pilot Pressure", unit: "PSI", color: "#7209b7" },
   qd_pres_psi: { label: "QD Pressure", unit: "PSI", color: "#560bad" },
 
@@ -47,6 +49,7 @@ export const SIGNAL_METADATA: Record<
   gn2_external_temp_c: { label: "GN2 External", unit: "°C", color: "#1ce3ff" },
   lox_upper_temp_c: { label: "LOX Upper", unit: "°C", color: "#00f5ff" },
   lox_lower_temp_c: { label: "LOX Lower", unit: "°C", color: "#4cc9f0" },
+  cap_fill_board_temp_c: { label: "Board Temp", unit: "°C", color: "#fb923c" },
 
   load_cell_1_lbs: { label: "Load Cell 1", unit: "lbs", color: "#ff9e00" },
   load_cell_2_lbs: { label: "Load Cell 2", unit: "lbs", color: "#ff6d00" },
@@ -77,8 +80,8 @@ export const SIGNAL_METADATA: Record<
   },
 
   cap_fill_actual: {
-    label: "Cap Actual",
-    unit: "pF",
+    label: "Cap Fill Actual",
+    unit: "%",
     color: "#38bdf8",
   },
   cap_fill_base: {
@@ -86,21 +89,16 @@ export const SIGNAL_METADATA: Record<
     unit: "pF",
     color: "#94a3b8",
   },
-  cap_fill_board_temp_c: {
-    label: "Board Temp",
-    unit: "°C",
-    color: "#fb923c",
-  },
 };
 
 export interface Sample {
-  timestamp: number; // ms
+  timestamp: number; // microseconds
   value: number;
 }
 
 class SignalBuffer {
   private buffer: Sample[] = [];
-  private maxSize = 100_000; //can change this later
+  private maxSize = 100_000;
 
   append(sample: Sample) {
     this.buffer.push(sample);
@@ -166,6 +164,7 @@ const initializeBuffers = () => {
     "gn2_external_temp_c",
     "lox_upper_temp_c",
     "lox_lower_temp_c",
+    "cap_fill_board_temp_c",
     "load_cell_1_lbs",
     "load_cell_2_lbs",
     "total_load_lbs",
@@ -177,7 +176,6 @@ const initializeBuffers = () => {
     "igniter_current_ma",
     "cap_fill_actual",
     "cap_fill_base",
-    "cap_fill_board_temp_c",
   ];
 
   const buffers = new Map<SignalType, SignalBuffer>();
@@ -200,9 +198,7 @@ export const useTelemetryStore = create<TelemetryState>()(
         console.warn(`Buffer not found for signal: ${signal}`);
         return;
       }
-
       buffer.append(sample);
-
       set({ buffers: new Map(get().buffers) });
     },
 
@@ -210,10 +206,9 @@ export const useTelemetryStore = create<TelemetryState>()(
       const newPlot: PlotConfig = {
         id: `${signal}-${Date.now()}`,
         signal,
-        timeRange: 120, // 2 min default - can change
+        timeRange: 120,
         paused: false,
       };
-
       set({ plots: [...get().plots, newPlot] });
     },
 

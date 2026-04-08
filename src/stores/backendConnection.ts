@@ -193,6 +193,23 @@ class BackendConnectionManager {
         value: data.igniter_ma,
       });
     }
+
+    if (deviceStates.capFill) {
+      const { ts, data } = deviceStates.capFill;
+      store.appendSample("cap_fill_actual", {
+        timestamp: ts,
+        value: data.cap_fill_actual,
+      });
+      store.appendSample("cap_fill_base", {
+        timestamp: ts,
+        value: data.cap_fill_base,
+      });
+      store.appendSample("cap_fill_board_temp_c", {
+        timestamp: ts,
+        value: data.board_temp,
+      });
+    }
+
     store.setConnected(true);
   }
 }
