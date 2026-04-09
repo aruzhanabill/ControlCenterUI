@@ -91,8 +91,25 @@ export const RelayControlPanel = memo(function RelayControlPanel() {
     [actorRef, relayStates],
   );
 
+  const handleFsCommand = useCallback(
+    (command: "STATE_ENGINE_PRIME" | "STATE_FIRE" | "STATE_ABORT") => {
+      actorRef.send({
+        type: "SEND_FS_COMMAND",
+        value: { command },
+      });
+    },
+    [actorRef],
+  );
+
   const canSend = useLaunchMachineSelector((state) =>
     state.can({ type: "SEND_MANUAL_MESSAGES", messages: [] }),
+  );
+
+  const canSendFsCommand = useLaunchMachineSelector((state) =>
+    state.can({
+      type: "SEND_FS_COMMAND",
+      value: { command: "STATE_FIRE" },
+    }),
   );
 
   const [checks, setChecks] = useState<Record<FiringCheckKey, boolean>>({
@@ -107,7 +124,7 @@ export const RelayControlPanel = memo(function RelayControlPanel() {
     setChecks((prev) => ({ ...prev, [key]: !prev[key] }));
   }, []);
 
-  const renderButton = (relay: { key: RelayKey; label: string }) => {
+  const renderRelayButton = (relay: { key: RelayKey; label: string }) => {
     const isOn = relayStates?.[relay.key] ?? false;
     const canToggle = canSend && relayStates !== undefined;
 
@@ -143,12 +160,15 @@ export const RelayControlPanel = memo(function RelayControlPanel() {
 
   return (
     <div className="flex flex-row h-full gap-2">
-      <div className="flex flex-col flex-none p-2 border bg-gray-el-bg rounded-xl border-gray-border">
+      <div
+        className="flex flex-col p-2 border bg-gray-el-bg rounded-xl border-gray-border"
+        style={{ flexBasis: "40%", flexShrink: 0 }}
+      >
         <h2 className="mb-2 text-xs font-bold tracking-widest uppercase text-gray-text">
           Manual Relay Control
         </h2>
         <div className="flex-1 grid grid-cols-5 grid-rows-1 gap-2">
-          {RELAYS.map((relay) => renderButton(relay))}
+          {RELAYS.map((relay) => renderRelayButton(relay))}
         </div>
       </div>
 
@@ -197,42 +217,93 @@ export const RelayControlPanel = memo(function RelayControlPanel() {
           </div>
         </div>
 
-        {/* Firing buttons */}
-        <div className="flex-1 grid grid-cols-2 grid-rows-2 gap-2">
-          {FIRING_RELAYS.map((relay) => {
-            const isOn = relayStates?.[relay.key] ?? false;
-            const canToggle =
-              canSend && relayStates !== undefined && allChecked;
+        <div className="flex flex-col flex-1 gap-2">
+          <div className="flex-1 grid grid-cols-2 grid-rows-2 gap-2">
+            {FIRING_RELAYS.map((relay) => {
+              const isOn = relayStates?.[relay.key] ?? false;
+              const canToggle =
+                canSend && relayStates !== undefined && allChecked;
 
-            return (
-              <button
-                key={relay.key}
-                onClick={() => handleToggle(relay.key)}
-                disabled={!canToggle}
-                className={[
-                  "rounded-xl border-2 transition-all flex flex-col items-center justify-center p-1.5",
-                  isOn
-                    ? "bg-green-bg border-green-solid text-green-text"
-                    : "bg-gray-bg-2 border-gray-border text-gray-text",
-                  !canToggle
-                    ? "cursor-not-allowed opacity-50"
-                    : "cursor-pointer hover:opacity-80",
-                ].join(" ")}
-              >
-                <div
-                  className={`w-3 h-3 rounded-full mb-1 ${
-                    isOn ? "bg-green-solid animate-pulse" : "bg-red-solid"
-                  }`}
-                />
-                <div className="text-xs font-bold leading-tight text-center">
-                  {relay.label}
-                </div>
-                <div className="text-xs font-semibold opacity-70">
-                  {isOn ? "OPEN" : "CLOSED"}
-                </div>
-              </button>
-            );
-          })}
+              return (
+                <button
+                  key={relay.key}
+                  onClick={() => handleToggle(relay.key)}
+                  disabled={!canToggle}
+                  className={[
+                    "rounded-xl border-2 transition-all flex flex-col items-center justify-center p-1.5",
+                    isOn
+                      ? "bg-green-bg border-green-solid text-green-text"
+                      : "bg-gray-bg-2 border-gray-border text-gray-text",
+                    !canToggle
+                      ? "cursor-not-allowed opacity-50"
+                      : "cursor-pointer hover:opacity-80",
+                  ].join(" ")}
+                >
+                  <div
+                    className={`w-3 h-3 rounded-full mb-1 ${
+                      isOn ? "bg-green-solid animate-pulse" : "bg-red-solid"
+                    }`}
+                  />
+                  <div className="text-xs font-bold leading-tight text-center">
+                    {relay.label}
+                  </div>
+                  <div className="text-xs font-semibold opacity-70">
+                    {isOn ? "OPEN" : "CLOSED"}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              onClick={() => handleFsCommand("STATE_ENGINE_PRIME")}
+              disabled={!canSendFsCommand || !allChecked}
+              className={[
+                "rounded-xl border-2 transition-all flex flex-col items-center justify-center p-2",
+                "bg-gray-bg-2 border-gray-border text-gray-text",
+                !canSendFsCommand || !allChecked
+                  ? "cursor-not-allowed opacity-50"
+                  : "cursor-pointer hover:opacity-80",
+              ].join(" ")}
+            >
+              <div className="text-xs font-bold leading-tight tracking-wide text-center uppercase">
+                Engine Prime
+              </div>
+            </button>
+
+            <button
+              onClick={() => handleFsCommand("STATE_FIRE")}
+              disabled={!canSendFsCommand || !allChecked}
+              className={[
+                "rounded-xl border-2 transition-all flex flex-col items-center justify-center p-2",
+                "bg-gray-bg-2 border-gray-border text-gray-text",
+                !canSendFsCommand || !allChecked
+                  ? "cursor-not-allowed opacity-50"
+                  : "cursor-pointer hover:opacity-80",
+              ].join(" ")}
+            >
+              <div className="text-xs font-bold leading-tight tracking-wide text-center uppercase">
+                Fire
+              </div>
+            </button>
+
+            <button
+              onClick={() => handleFsCommand("STATE_ABORT")}
+              disabled={!canSendFsCommand}
+              className={[
+                "rounded-xl border-2 transition-all flex flex-col items-center justify-center p-2",
+                "bg-gray-bg-2 border-gray-border text-gray-text",
+                !canSendFsCommand
+                  ? "cursor-not-allowed opacity-50"
+                  : "cursor-pointer hover:opacity-80",
+              ].join(" ")}
+            >
+              <div className="text-xs font-bold leading-tight tracking-wide text-center uppercase">
+                Abort
+              </div>
+            </button>
+          </div>
         </div>
       </div>
     </div>
