@@ -150,7 +150,7 @@ class BackendConnectionManager {
 
       store.appendSample("altitude_ft", {
         timestamp,
-        value: data.gps_altitude * 3.28084, // meters to feet
+        value: data.gps_altitude * 3.28084,
       });
 
       const G_PER_RAW = 1 / 2140;
@@ -195,17 +195,17 @@ class BackendConnectionManager {
     }
 
     if (deviceStates.capFill) {
-      const { ts, data } = deviceStates.capFill;
+      const { data } = deviceStates.capFill;
       store.appendSample("cap_fill_actual", {
-        timestamp: ts,
+        timestamp,
         value: data.cap_fill_actual,
       });
       store.appendSample("cap_fill_base", {
-        timestamp: ts,
+        timestamp,
         value: data.cap_fill_base,
       });
       store.appendSample("cap_fill_board_temp_c", {
-        timestamp: ts,
+        timestamp,
         value: data.board_temp,
       });
     }
@@ -214,5 +214,4 @@ class BackendConnectionManager {
   }
 }
 
-// Singleton instance
 export const backendConnection = new BackendConnectionManager();
