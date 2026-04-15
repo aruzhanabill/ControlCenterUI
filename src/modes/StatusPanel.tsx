@@ -247,18 +247,25 @@ export const StatusPanel = memo(function StatusPanel() {
               rec && { ts: rec.ts, value: rec.data.copv_2_median }
             }
           />
+
           <StatusDisplayWithChart
             label="Injector 1 (PSI)"
             // eslint-disable-next-line react-perf/jsx-no-new-function-as-prop
             selector={({ fsInjectorTransducers: rec }) =>
-              rec && { ts: rec.ts, value: rec.data.injector_manifold_1_median }
+              rec && {
+                ts: rec.ts,
+                value: rec.data.injector_manifold_1_median ?? 0,
+              }
             }
           />
           <StatusDisplayWithChart
             label="Injector 2 (PSI)"
             // eslint-disable-next-line react-perf/jsx-no-new-function-as-prop
             selector={({ fsInjectorTransducers: rec }) =>
-              rec && { ts: rec.ts, value: rec.data.injector_manifold_2_median }
+              rec && {
+                ts: rec.ts,
+                value: rec.data.injector_manifold_2_median ?? 0,
+              }
             }
           />
           <StatusDisplayWithChart
