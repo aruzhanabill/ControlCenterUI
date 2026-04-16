@@ -280,11 +280,11 @@ export const RelayControlPanel = memo(function RelayControlPanel() {
 
             <button
               onClick={() => handleFsCommand("STATE_FIRE")}
-              disabled={!isEnginePrime && (!canSendFsCommand || !allChecked)}
+              disabled={!isEnginePrime && (!canSendFsCommand || allChecked)}
               className={[
                 "rounded-xl border-2 transition-all flex flex-col items-center justify-center p-2",
                 "bg-gray-bg-2 border-gray-border text-gray-text",
-                !isEnginePrime && (!canSendFsCommand || !allChecked)
+                !isEnginePrime && (!canSendFsCommand || allChecked)
                   ? "cursor-not-allowed opacity-50"
                   : "cursor-pointer hover:opacity-80",
               ].join(" ")}

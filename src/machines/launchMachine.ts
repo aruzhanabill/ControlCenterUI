@@ -439,7 +439,7 @@ export function createLaunchMachine(
           }
 
           if (command.command === "STATE_FIRE") {
-            return currentState === "GN2_STANDBY" || currentState === "CUSTOM";
+            return currentState === "GN2_STANDBY" || currentState === "CUSTOM" || currentState == "ENGINE_PRIME";
           }
 
           return true;
