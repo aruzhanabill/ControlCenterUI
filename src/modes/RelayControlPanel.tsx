@@ -46,6 +46,7 @@ export const RelayControlPanel = memo(function RelayControlPanel() {
   );
 
   const isEnginePrime = fsState === "ENGINE_PRIME";
+  const isFire = fsState === "FIRE";
 
   const handleToggle = useCallback(
     (relayKey: RelayKey) => {
@@ -280,11 +281,11 @@ export const RelayControlPanel = memo(function RelayControlPanel() {
 
             <button
               onClick={() => handleFsCommand("STATE_FIRE")}
-              disabled={!isEnginePrime && (!canSendFsCommand || allChecked)}
+              disabled={!isEnginePrime && (!canSendFsCommand || !allChecked)}
               className={[
                 "rounded-xl border-2 transition-all flex flex-col items-center justify-center p-2",
                 "bg-gray-bg-2 border-gray-border text-gray-text",
-                !isEnginePrime && (!canSendFsCommand || allChecked)
+                !isEnginePrime && (!canSendFsCommand || !allChecked)
                   ? "cursor-not-allowed opacity-50"
                   : "cursor-pointer hover:opacity-80",
               ].join(" ")}
@@ -296,11 +297,11 @@ export const RelayControlPanel = memo(function RelayControlPanel() {
 
             <button
               onClick={() => handleFsCommand("STATE_ABORT")}
-              disabled={!canSendFsCommand && !isEnginePrime}
+              disabled={!canSendFsCommand && !isEnginePrime && !isFire}
               className={[
                 "rounded-xl border-2 transition-all flex flex-col items-center justify-center p-2",
                 "bg-gray-bg-2 border-gray-border text-gray-text",
-                !canSendFsCommand && !isEnginePrime
+                !canSendFsCommand && !isEnginePrime && !isFire
                   ? "cursor-not-allowed opacity-50"
                   : "cursor-pointer hover:opacity-80",
               ].join(" ")}
