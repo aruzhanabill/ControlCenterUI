@@ -41,6 +41,12 @@ export const RelayControlPanel = memo(function RelayControlPanel() {
     (state) => state.context.deviceStates.fsState?.data,
   );
 
+  const fsState = useLaunchMachineSelector(
+    (state) => state.context.deviceStates.fsState?.data.state,
+  );
+
+  const isEnginePrime = fsState === "ENGINE_PRIME";
+
   const handleToggle = useCallback(
     (relayKey: RelayKey) => {
       if (!relayStates) return;
@@ -274,11 +280,11 @@ export const RelayControlPanel = memo(function RelayControlPanel() {
 
             <button
               onClick={() => handleFsCommand("STATE_FIRE")}
-              disabled={!canSendFsCommand || !allChecked}
+              disabled={(!canSendFsCommand && !isEnginePrime) || !allChecked}
               className={[
                 "rounded-xl border-2 transition-all flex flex-col items-center justify-center p-2",
                 "bg-gray-bg-2 border-gray-border text-gray-text",
-                !canSendFsCommand || !allChecked
+                (!canSendFsCommand && !isEnginePrime) || !allChecked
                   ? "cursor-not-allowed opacity-50"
                   : "cursor-pointer hover:opacity-80",
               ].join(" ")}
@@ -290,11 +296,11 @@ export const RelayControlPanel = memo(function RelayControlPanel() {
 
             <button
               onClick={() => handleFsCommand("STATE_ABORT")}
-              disabled={!canSendFsCommand}
+              disabled={!canSendFsCommand && !isEnginePrime}
               className={[
                 "rounded-xl border-2 transition-all flex flex-col items-center justify-center p-2",
                 "bg-gray-bg-2 border-gray-border text-gray-text",
-                !canSendFsCommand
+                !canSendFsCommand && !isEnginePrime
                   ? "cursor-not-allowed opacity-50"
                   : "cursor-pointer hover:opacity-80",
               ].join(" ")}
